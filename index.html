@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fluxo de Caixa Pessoal</title>
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+
+<!-- LOADING / LOGIN SIMPLES (uso pessoal, apenas tela de entrada) -->
+<div id="loginScreen">
+  <div class="login-box">
+    <h1><i class="fa-solid fa-wallet"></i> Fluxo de Caixa Pessoal</h1>
+    <p>Controle de Despesas</p>
+    <button onclick="iniciarApp()">Entrar</button>
+  </div>
+</div>
+
+<div class="app" id="appRoot">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <h2>Fluxo de Caixa <span>Controle de Despesas</span></h2>
+    <div class="nav-item active" data-section="dashboard"><i class="fa-solid fa-chart-pie"></i> Dashboard</div>
+    <div class="nav-item" data-section="lancamentos"><i class="fa-solid fa-money-bill-transfer"></i> Lançamentos</div>
+    <div class="nav-item" data-section="parcelas"><i class="fa-solid fa-layer-group"></i> Parcelas</div>
+    <div class="nav-item" data-section="cadastros"><i class="fa-solid fa-address-book"></i> Cadastros</div>
+    <div class="nav-item" data-section="relatorios"><i class="fa-solid fa-file-pdf"></i> Relatórios</div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="topbar">
+      <h1 id="pageTitle">Dashboard</h1>
+      <div class="date" id="dataHoje"></div>
+    </div>
+
+    <!-- DASHBOARD -->
+    <section class="section active" id="sec-dashboard">
+      <div class="toolbar">
+        <select id="dashMes"></select>
+        <select id="dashAno"></select>
+        <button class="btn" onclick="renderDashboard()"><i class="fa-solid fa-filter"></i> Aplicar</button>
+        <div class="spacer"></div>
+        <button class="btn outline" onclick="carregarTudo()"><i class="fa-solid fa-rotate"></i> Atualizar dados</button>
+      </div>
+
+      <div class="cards-row">
+        <div class="card saldo"><div class="label">Saldo total (contas)</div><div class="value" id="cardSaldo">R$ 0,00</div></div>
+        <div class="card receita"><div class="label">Receitas no mês</div><div class="value" id="cardReceita">R$ 0,00</div></div>
+        <div class="card despesa"><div class="label">Despesas no mês</div><div class="value" id="cardDespesa">R$ 0,00</div></div>
+        <div class="card alerta"><div class="label">Vencendo hoje / atrasado</div><div class="value" id="cardAlerta">0</div></div>
+      </div>
+
+      <div class="charts-row">
+        <div class="chart-box"><h3>Despesas por categoria (rosca)</h3><canvas id="chartRosca"></canvas></div>
+        <div class="chart-box"><h3>Receita x Despesa por mês (colunas)</h3><canvas id="chartColunas"></canvas></div>
+        <div class="chart-box full"><h3>Despesas por categoria (barras)</h3><canvas id="chartBarras"></canvas></div>
+      </div>
+
+      <div class="lembretes">
+        <h3><i class="fa-solid fa-bell"></i> Lembretes de contas (hoje e atrasadas)</h3>
+        <div id="listaLembretes"></div>
+      </div>
+    </section>
+
+    <!-- LANÇAMENTOS -->
+    <section class="section" id="sec-lancamentos">
+      <div class="toolbar">
+        <select id="fMes"><option value="">Mês</option></select>
+        <select id="fAno"><option value="">Ano</option></select>
+        <select id="fConta"><option value="">Conta bancária</option></select>
+        <select id="fTipo"><option value="">Tipo</option><option>Despesa</option><option>Receita</option></select>
+        <select id="fCategoria"><option value="">Categoria</option></select>
+        <button class="btn outline" onclick="renderLancamentos()"><i class="fa-solid fa-filter"></i> Filtrar</button>
+        <div class="spacer"></div>
+        <button class="btn" onclick="abrirFormLancamento()"><i class="fa-solid fa-plus"></i> Novo lançamento</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>Data</th><th>Cliente/Fornecedor</th><th>Categoria</th><th>Tipo</th><th>Pagamento</th>
+            <th>Conta</th><th>Valor</th><th>Vencimento</th><th>Status</th><th>Ações</th>
+          </tr></thead>
+          <tbody id="tblLancamentos"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- PARCELAS -->
+    <section class="section" id="sec-parcelas">
+      <div class="toolbar">
+        <select id="pStatus"><option value="">Status</option><option>Pendente</option><option>Vencido</option><option>Liquidado</option></select>
+        <button class="btn outline" onclick="renderParcelas()"><i class="fa-solid fa-filter"></i> Filtrar</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Lançamento</th><th>Fornecedor</th><th>Parcela</th><th>Valor</th><th>Vencimento</th><th>Pagamento</th><th>Status</th><th>Ações</th></tr></thead>
+          <tbody id="tblParcelas"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- CADASTROS -->
+    <section class="section" id="sec-cadastros">
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="ClientesFornecedores">Clientes/Fornecedores</button>
+        <button class="tab-btn" data-tab="Categorias">Categorias</button>
+        <button class="tab-btn" data-tab="ContasBancarias">Contas Bancárias</button>
+        <button class="tab-btn" data-tab="CartoesCredito">Cartões de Crédito</button>
+      </div>
+
+      <div class="tab-content active" id="tab-ClientesFornecedores">
+        <div class="toolbar"><div class="spacer"></div><button class="btn" onclick="abrirFormCadastro('ClientesFornecedores')"><i class="fa-solid fa-plus"></i> Novo</button></div>
+        <div class="table-wrap"><table><thead><tr><th>Nome</th><th>Tipo</th><th>Categoria Padrão</th><th>Telefone</th><th>Ativo</th><th>Ações</th></tr></thead><tbody id="tbl-ClientesFornecedores"></tbody></table></div>
+      </div>
+      <div class="tab-content" id="tab-Categorias">
+        <div class="toolbar"><div class="spacer"></div><button class="btn" onclick="abrirFormCadastro('Categorias')"><i class="fa-solid fa-plus"></i> Novo</button></div>
+        <div class="table-wrap"><table><thead><tr><th>Nome</th><th>Tipo</th><th>Cor</th><th>Ativo</th><th>Ações</th></tr></thead><tbody id="tbl-Categorias"></tbody></table></div>
+      </div>
+      <div class="tab-content" id="tab-ContasBancarias">
+        <div class="toolbar"><div class="spacer"></div><button class="btn" onclick="abrirFormCadastro('ContasBancarias')"><i class="fa-solid fa-plus"></i> Novo</button></div>
+        <div class="table-wrap"><table><thead><tr><th>Banco</th><th>Tipo</th><th>Saldo Inicial</th><th>Ativo</th><th>Ações</th></tr></thead><tbody id="tbl-ContasBancarias"></tbody></table></div>
+      </div>
+      <div class="tab-content" id="tab-CartoesCredito">
+        <div class="toolbar"><div class="spacer"></div><button class="btn" onclick="abrirFormCadastro('CartoesCredito')"><i class="fa-solid fa-plus"></i> Novo</button></div>
+        <div class="table-wrap"><table><thead><tr><th>Cartão</th><th>Conta vinculada</th><th>Fechamento</th><th>Vencimento</th><th>Ativo</th><th>Ações</th></tr></thead><tbody id="tbl-CartoesCredito"></tbody></table></div>
+      </div>
+    </section>
+
+    <!-- RELATORIOS -->
+    <section class="section" id="sec-relatorios">
+      <div class="toolbar">
+        <select id="rMes"></select>
+        <select id="rAno"></select>
+        <select id="rTipo"><option value="">Tipo</option><option>Despesa</option><option>Receita</option></select>
+        <button class="btn" onclick="gerarPDF()"><i class="fa-solid fa-file-pdf"></i> Gerar relatório PDF</button>
+      </div>
+      <p class="empty-msg">O relatório reúne os lançamentos do período selecionado, com totais por categoria.</p>
+    </section>
+  </div>
+</div>
+
+<!-- MODAL LANÇAMENTO -->
+<div class="modal-overlay" id="modalLancamento">
+  <div class="modal">
+    <h3 id="modalLancTitle">Novo lançamento</h3>
+    <form id="formLancamento" onsubmit="salvarLancamento(event)">
+      <input type="hidden" id="lID">
+      <div class="form-group"><label>Fornecedor / Cliente *</label>
+        <select id="lCliente" required></select></div>
+      <div class="form-row">
+        <div class="form-group"><label>Tipo *</label><select id="lTipo" required><option>Despesa</option><option>Receita</option></select></div>
+        <div class="form-group"><label>Categoria *</label><select id="lCategoria" required></select></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Valor total (R$) *</label><input type="number" step="0.01" id="lValor" required></div>
+        <div class="form-group"><label>Data da compra *</label><input type="date" id="lDataCompra" required></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Forma de pagamento *</label>
+          <select id="lFormaPagamento" required onchange="onChangeFormaPagamento()">
+            <option>Débito</option><option>Crédito</option><option>Dinheiro</option><option>PIX</option><option>Transferência</option>
+          </select></div>
+        <div class="form-group"><label>Conta bancária *</label><select id="lConta" required></select></div>
+      </div>
+      <div class="form-group" id="grupoCartao" style="display:none;"><label>Cartão de crédito</label><select id="lCartao"></select></div>
+      <div class="form-row" id="grupoParcelas" style="display:none;">
+        <div class="form-group"><label>Parcelado?</label><select id="lParcelado" onchange="toggleQtdParcelas()"><option>Não</option><option>Sim</option></select></div>
+        <div class="form-group"><label>Qtd. parcelas</label><input type="number" id="lQtdParcelas" min="2" value="2" disabled></div>
+      </div>
+      <div class="form-group"><label>Data de vencimento</label><input type="date" id="lDataVencimento"></div>
+      <div class="form-group"><label>Observações</label><textarea id="lObs" rows="2"></textarea></div>
+      <div class="modal-actions">
+        <button type="button" class="btn outline" onclick="fecharModal('modalLancamento')">Cancelar</button>
+        <button type="submit" class="btn">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL GENÉRICO CADASTROS -->
+<div class="modal-overlay" id="modalCadastro">
+  <div class="modal">
+    <h3 id="modalCadastroTitle">Novo registro</h3>
+    <form id="formCadastro" onsubmit="salvarCadastro(event)">
+      <input type="hidden" id="cID">
+      <input type="hidden" id="cSheet">
+      <div id="camposCadastro"></div>
+      <div class="modal-actions">
+        <button type="button" class="btn outline" onclick="fecharModal('modalCadastro')">Cancelar</button>
+        <button type="submit" class="btn">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.1/jspdf.plugin.autotable.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
